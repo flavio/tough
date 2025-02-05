@@ -1,6 +1,7 @@
 use crate::schema::decoded::{Decoded, Hex};
 use crate::schema::error;
 use crate::schema::key::Key;
+use log::info;
 use serde::{de::Error as _, Deserialize, Deserializer};
 use snafu::ensure;
 use std::collections::HashMap;
@@ -24,13 +25,15 @@ where
     ) -> Result<(), error::Error> {
         let calculated = key.key_id()?;
         let keyid_hex = hex::encode(&keyid);
-        ensure!(
-            keyid == calculated,
-            error::InvalidKeyIdSnafu {
-                keyid: &keyid_hex,
-                calculated: hex::encode(&calculated),
-            }
-        );
+        if keyid != calculated {
+            info!(
+                "Key ID mismatch: key ID in key: {}, calculated key ID: {}",
+                keyid_hex,
+                hex::encode(&calculated)
+            );
+            info!("This build of tough has been configured to ignore this error because of https://github.com/sigstore/sigstore-rs/issues/429");
+            info!("Requiring this validation is going to be removed from the official TUF specification in the near future, see https://github.com/theupdateframework/specification/issues/305");
+        }
         ensure!(
             map.insert(keyid, key).is_none(),
             error::DuplicateKeyIdSnafu { keyid: keyid_hex }
